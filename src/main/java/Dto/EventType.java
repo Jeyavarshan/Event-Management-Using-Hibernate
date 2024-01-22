@@ -1,5 +1,4 @@
 package Dto;
-
 public enum EventType {
 		
 	Marriage,

@@ -1,5 +1,6 @@
 package Controller;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Scanner;
 
@@ -8,12 +9,15 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 import javax.persistence.Query;
-
+import Dto.EventType;
 import Dto.admin;
+import Dto.client;
 import Dto.clientEvent;
+import Dto.clientService;
 import Dto.service;
 import dao.AdminDao;
 import dao.clientDao;
+import dao.clientEventDao;
 import dao.clientServiceDao;
 import dao.serviceDao;
 
@@ -21,7 +25,7 @@ public class EventManagement {
 	AdminDao adao = new AdminDao();
 	serviceDao sdao = new serviceDao();
 	clientDao cdao = new clientDao();
-	clientEvent cedao = new clientEvent();
+	clientEventDao cedao = new clientEventDao();
 	clientServiceDao csdao = new clientServiceDao();
 	EntityManagerFactory emf = Persistence.createEntityManagerFactory("tenma");
 	EntityManager em = emf.createEntityManager();
@@ -30,7 +34,7 @@ public class EventManagement {
 	public static void main(String[] args) {
 		
 		EventManagement em = new EventManagement();
-		System.out.println(em.UpdateService());
+		System.out.println(em.createClientServices());
 		
 	}
 	
@@ -104,6 +108,13 @@ public class EventManagement {
 		return null;
 	}
 	
+	public List<service> getService(){
+		System.out.println("Enter Credendiatls to Proceed");
+		Query query = em.createQuery("select s from service s ");
+		List<service>s = (List<service>) query.getResultList();
+		return s;
+	}
+	
 	public String UpdateService() {
 		Scanner sc = new Scanner(System.in);
 		List<service> services = getAllService();
@@ -132,5 +143,173 @@ public class EventManagement {
 			return "Service not updated";
 		}
 	}
+	public service deleteService() {
+		Scanner sc = new Scanner(System.in);
+		admin exadmin = LoginAdmin();
+		if(exadmin != null) {
+			List<service> services = exadmin.getService();
+			for(service serv : services) 
+			{
+				System.out.println("Service Id  " + "Service Name  " + "Cost Per Person  " + "Cost Per Day  ");
+				System.out.println("  "+serv.getServiceId() + "  " +serv.getServiceName()+"  "+serv.getServiceCostPerPerson()+"  "+serv.getServiceCostPerDay());
+			}
+			System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Choose Service Id %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+			int id = sc.nextInt();
+			service tobedeleted = sdao.findService(id);
+			services.remove(tobedeleted);
+			exadmin.setService(services);
+			adao.updateAdmin(exadmin, exadmin.getId());
+			return tobedeleted;
+			
+			
+		}
+		return null;
+		
+	}
+	
+	public client saveClient()
+	{
+		client client = new client();
+		Scanner sc = new Scanner(System.in);
+		System.out.print("Enter Client Name: ");
+		client.setClientName(sc.next());
+		System.out.print("Enter client Mail: ");
+		client.setClientMail(sc.next());
+		System.out.print("Enter Admin Contact Number: ");
+		client.setClientCon(sc.nextLong());
+		
+		return cdao.saveClient(client);
+	}
+	
+	public client clientLogin() {
+		Scanner sc = new Scanner(System.in);
+		System.out.println("Enter client Email");
+		String Email = sc.next();
+		Query query = em.createQuery("select a from client a where a.clientMail=?1");
+		query.setParameter(1, Email);
+		client exclient = (client) query.getSingleResult();
+		if(exclient != null) {
+			if(exclient.getClientMail().equals(Email)) {
+				return exclient;
+			}return null;
+			
+		}return null;
+		
+	}
+	
+	public String createClientEvent() 
+	{	
+		
+		clientEvent ce = new clientEvent();
+		client client = clientLogin();
+		
+		if(client!=null) {
+		ce.setClient(client);
+		Scanner sc = new Scanner(System.in);
+		System.out.println("Enter Client Event Name");
+		ce.setClientEventName(sc.nextLine());
+		System.out.println("Enter client Event Location");
+		ce.setClientEventLocation(sc.next());
+		System.out.println("Start Date");
+		ce.setStartDate(LocalDate.now());
+		System.out.println("NO of Days");
+		ce.setClientEventNoOfDays(sc.nextInt());
+	
+		
+		System.out.println("Enter 1 for Marriage");
+		System.out.println("Enter 2 for Engagement");
+		System.out.println("Enter 3 for Brithday");
+		System.out.println("Enter 4 for Aniversary");
+		System.out.println("Enter 5 for BabyShower");
+		System.out.println("Enter 6 for Reunion");
+		System.out.println("Enter 7 for MarriageCeremony");
+		System.out.println("Enter 8 for BachlorParty");
+		System.out.println("Enter 9 for DeathCeremony");
+		
+		int num = sc.nextInt();
+		
+		if(num == 0)
+			ce.setEt(EventType.Marriage);
+		else if(num == 1)
+			ce.setEt(EventType.Engagement);
+		else if(num == 2)
+			ce.setEt(EventType.Brithday);
+		else if(num == 3)
+			ce.setEt(EventType.Aniversary);
+		else if(num == 4)
+			ce.setEt(EventType.BabyShower);
+		else if(num == 5)
+			ce.setEt(EventType.Reunion);
+		else if(num == 6)
+			ce.setEt(EventType.MarriageCeremony);
+		else if(num == 7)
+			ce.setEt(EventType.BachlorParty);
+		else if(num == 8)
+			ce.setEt(EventType.DeathCeremony);
+		
+		
+			List<clientEvent> clientEve = client.getClientEvent();
+			clientEve.add(ce);
+			client.setClientEvent(clientEve);
+			ce.setClient(client);
+			client c = cdao.updateClient(client, client.getClientID());
+			if(c!= null) {
+				return "client Event Added";
+			}
+			
+		}
+		return null;
+		
+	}
+	
+	public String createClientServices() {
+		client client = clientLogin();
+		
+		if(client!= null) {
+			List <clientEvent> ce = client.getClientEvent();
+			Scanner sc = new Scanner(System.in);
+			int id = sc.nextInt();
+			for(clientEvent cli :ce ) {
+				if(id == cli.getClientEventId()) {
+					double eventcost = cli.getClientEventCost();
+					List<clientService> cs = cli.getClientService();
+					int noOfServices = sc.nextInt();
+					for(int i=1 ; i<=noOfServices;i++) {
+						clientService cs1 = new clientService();
+						List<service> listOfService = getService();
+						for(service serv : listOfService) {
+							System.out.println(listOfService);
+						}
+						System.out.println("Enter Service id");
+						int servvalue =sc.nextInt();
+						
+						service s = sdao.findService(servvalue);
+						cs1.setClientServiceName(s.getServiceName());
+						cs1.setClientServiceNoOfDays(cli.getClientEventNoOfDays());
+						cs1.setClientServiceCostperPerson(s.getServiceCostPerPerson());
+						cs1.setClientServiceCost(cs1.getClientServiceCostperPerson()*cs1.getClientServiceNoOfDays());
+						eventcost = eventcost+cs1.getClientServiceCost();
+						cs.add(cs1);
+						
+						clientService cs2 = csdao.saveClientService(cs1);
+						
+					}
+					cli.setClientEventCost(eventcost);
+					cli.setClientService(cs);
+					clientEvent ce2 = cedao.updateClientEvent(cli, cli.getClientEventId());
+					
+					if(ce2 != null) {
+						return "client Service Added";
+					}
+					
+				}
+			}
+			
+		}
+		return null;
+		
+	}
+	
+	
 	
 }
